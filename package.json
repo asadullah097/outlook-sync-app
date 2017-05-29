@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/Drashti96/Outlook-Sync-Node.js-App/issues"
   },
-  "homepage": "https://github.com/Drashti96/Outlook-Sync-Node.js-App#readme"
+  "homepage": "https://github.com/Drashti96/Outlook-Sync-Node.js-App#readme",
+  "dependencies": {
+    "simple-oauth2": "^1.2.0"
+  }
 }
