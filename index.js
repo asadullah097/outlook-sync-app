@@ -24,7 +24,48 @@ function authorize(response, request) {
   var url_parts = url.parse(request.url, true);
   var code = url_parts.query.code;
   console.log('Code: ' + code);
-  response.writeHead(200, {'Content-Type': 'text/html'});
-  response.write('<p>Received auth code: ' + code + '</p>');
-  response.end();
+  authHelper.getTokenFromCode(code, tokenReceived, response);
+}
+
+function getUserEmail(token, callback) {
+  // Create a Graph client
+  var client = microsoftGraph.Client.init({
+    authProvider: (done) => {
+      // Just return the token
+      done(null, token);
+    }
+  });
+
+  // Get the Graph /Me endpoint to get user email address
+  client
+    .api('/me')
+    .get((err, res) => {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, res.mail);
+      }
+    });
+}
+
+function tokenReceived(response, error, token) {
+  if (error) {
+    console.log('Access token error: ', error.message);
+    response.writeHead(200, {'Content-Type': 'text/html'});
+    response.write('<p>ERROR: ' + error + '</p>');
+    response.end();
+  } else {
+    getUserEmail(token.token.access_token, function(error, email) {
+      if (error) {
+        console.log('getUserEmail returned an error: ' + error);
+        response.write('<p>ERROR: ' + error + '</p>');
+        response.end();
+      } else if (email) {
+        response.writeHead(200, {'Content-Type': 'text/html'});
+        response.write('<p>Email: ' + email + '</p>');
+        response.write('<p>Access token: ' + token.token.access_token + '</p>');
+        response.end();
+      }
+    });
+  }
 }
