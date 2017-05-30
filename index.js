@@ -8,6 +8,7 @@ handle['/'] = home;
 handle['/authorize'] = authorize;
 handle['/mail'] = mail;
 handle['/calendar'] = calendar;
+handle['/contacts'] = contacts;
 
 server.start(router.route, handle);
 
@@ -198,6 +199,54 @@ function calendar(response, request) {
               response.write('<tr><td>' + event.subject +
                 '</td><td>' + event.start.dateTime.toString() +
                 '</td><td>' + event.end.dateTime.toString() + '</td></tr>');
+            });
+
+            response.write('</table>');
+            response.end();
+          }
+        });
+    }
+  });
+}
+
+function contacts(response, request) {
+  getAccessToken(request, response, function (error, token) {
+    console.log('Token found in cookie: ', token);
+    var email = getValueFromCookie('node-tutorial-email', request.headers.cookie);
+    console.log('Email found in cookie: ', email);
+    if (token) {
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.write('<div><h1>Your contacts</h1></div>');
+
+      // Create a Graph client
+      var client = microsoftGraph.Client.init({
+        authProvider: (done) => {
+          // Just return the token
+          done(null, token);
+        }
+      });
+
+      // Get the first 10 contacts in alphabetical order
+      // by given name
+      client
+        .api('/me/contacts')
+        .header('X-AnchorMailbox', email)
+        .top(10)
+        .select('givenName,surname,emailAddresses')
+        .orderby('givenName ASC')
+        .get((err, res) => {
+          if (err) {
+            console.log('getContacts returned an error: ' + err);
+            response.write('<p>ERROR: ' + err + '</p>');
+            response.end();
+          } else {
+            console.log('getContacts returned ' + res.value.length + ' contacts.');
+            response.write('<table><tr><th>First name</th><th>Last name</th><th>Email</th></tr>');
+            res.value.forEach(function (contact) {
+              var email = contact.emailAddresses[0] ? contact.emailAddresses[0].address : 'NONE';
+              response.write('<tr><td>' + contact.givenName +
+                '</td><td>' + contact.surname +
+                '</td><td>' + email + '</td></tr>');
             });
 
             response.write('</table>');

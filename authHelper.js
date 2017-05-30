@@ -18,7 +18,7 @@ var scopes = [ 'openid',
                'offline_access',
                'User.Read',
                'Mail.Read',
-               'Calendars.Read' ];
+               'Contacts.Read' ];
 
 function getAuthUrl() {
   var returnVal = oauth2.authorizationCode.authorizeURL({
