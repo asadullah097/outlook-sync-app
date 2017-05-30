@@ -115,8 +115,43 @@ function mail(response, request) {
     console.log('Email found in cookie: ', email);
     if (token) {
       response.writeHead(200, {'Content-Type': 'text/html'});
-      response.write('<p>Token retrieved from cookie: ' + token + '</p>');
-      response.end();
+      response.write('<div><h1>Your inbox</h1></div>');
+
+      // Create a Graph client
+      var client = microsoftGraph.Client.init({
+        authProvider: (done) => {
+          // Just return the token
+          done(null, token);
+        }
+      });
+
+      // Get the 10 newest messages
+      client
+        .api('/me/mailfolders/inbox/messages')
+        .header('X-AnchorMailbox', email)
+        .top(10)
+        .select('subject,from,receivedDateTime,isRead')
+        .orderby('receivedDateTime DESC')
+        .get((err, res) => {
+          if (err) {
+            console.log('getMessages returned an error: ' + err);
+            response.write('<p>ERROR: ' + err + '</p>');
+            response.end();
+          } else {
+            console.log('getMessages returned ' + res.value.length + ' messages.');
+            response.write('<table><tr><th>From</th><th>Subject</th><th>Received</th></tr>');
+            res.value.forEach(function(message) {
+              console.log('  Subject: ' + message.subject);
+              var from = message.from ? message.from.emailAddress.name : 'NONE';
+              response.write('<tr><td>' + from + 
+                '</td><td>' + (message.isRead ? '' : '<b>') + message.subject + (message.isRead ? '' : '</b>') +
+                '</td><td>' + message.receivedDateTime.toString() + '</td></tr>');
+            });
+
+            response.write('</table>');
+            response.end();
+          }
+        });
     } else {
       response.writeHead(200, {'Content-Type': 'text/html'});
       response.write('<p> No token found in cookie!</p>');
