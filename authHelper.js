@@ -15,6 +15,7 @@ var redirectUri = 'http://localhost:8000/authorize';
 
 // The scopes the app requires
 var scopes = [ 'openid',
+               'offline_access',
                'User.Read',
                'Mail.Read' ];
 
@@ -45,6 +46,13 @@ function getTokenFromCode(auth_code, callback, response) {
   });
 }
 
+function refreshAccessToken(refreshToken, callback) {
+  var tokenObj = oauth2.accessToken.create({refresh_token: refreshToken});
+  tokenObj.refresh(callback);
+}
+
+
 
 exports.getAuthUrl = getAuthUrl;
 exports.getTokenFromCode = getTokenFromCode;
+exports.refreshAccessToken = refreshAccessToken;

@@ -6,6 +6,7 @@ var microsoftGraph = require("@microsoft/microsoft-graph-client");
 var handle = {};
 handle['/'] = home;
 handle['/authorize'] = authorize;
+handle['/mail'] = mail;
 
 server.start(router.route, handle);
 
@@ -40,10 +41,10 @@ function getUserEmail(token, callback) {
   client
     .api('/me')
     .get((err, res) => {
-      if (err) {
+    if (err) {
         callback(err, null);
       } else {
-        callback(null, res.mail);
+        callback(null, res.userPrincipalName);
       }
     });
 }
@@ -55,17 +56,71 @@ function tokenReceived(response, error, token) {
     response.write('<p>ERROR: ' + error + '</p>');
     response.end();
   } else {
-    getUserEmail(token.token.access_token, function(error, email) {
+    getUserEmail(token.token.access_token, function(error, email){
       if (error) {
         console.log('getUserEmail returned an error: ' + error);
         response.write('<p>ERROR: ' + error + '</p>');
         response.end();
       } else if (email) {
-        response.writeHead(200, {'Content-Type': 'text/html'});
-        response.write('<p>Email: ' + email + '</p>');
-        response.write('<p>Access token: ' + token.token.access_token + '</p>');
+        var cookies = ['node-tutorial-token=' + token.token.access_token + ';Max-Age=4000',
+                       'node-tutorial-refresh-token=' + token.token.refresh_token + ';Max-Age=4000',
+                       'node-tutorial-token-expires=' + token.token.expires_at.getTime() + ';Max-Age=4000',
+                       'node-tutorial-email=' + email + ';Max-Age=4000'];
+        response.setHeader('Set-Cookie', cookies);
+        response.writeHead(302, {'Location': 'http://localhost:8000/mail'});
         response.end();
       }
-    });
+    }); 
   }
+}
+
+function getValueFromCookie(valueName, cookie) {
+  if (cookie.indexOf(valueName) !== -1) {
+    var start = cookie.indexOf(valueName) + valueName.length + 1;
+    var end = cookie.indexOf(';', start);
+    end = end === -1 ? cookie.length : end;
+    return cookie.substring(start, end);
+  }
+}
+
+function getAccessToken(request, response, callback) {
+  var expiration = new Date(parseFloat(getValueFromCookie('node-tutorial-token-expires', request.headers.cookie)));
+
+  if (expiration <= new Date()) {
+    // refresh token
+    console.log('TOKEN EXPIRED, REFRESHING');
+    var refresh_token = getValueFromCookie('node-tutorial-refresh-token', request.headers.cookie);
+    authHelper.refreshAccessToken(refresh_token, function(error, newToken){
+      if (error) {
+        callback(error, null);
+      } else if (newToken) {
+        var cookies = ['node-tutorial-token=' + newToken.token.access_token + ';Max-Age=4000',
+                       'node-tutorial-refresh-token=' + newToken.token.refresh_token + ';Max-Age=4000',
+                       'node-tutorial-token-expires=' + newToken.token.expires_at.getTime() + ';Max-Age=4000'];
+        response.setHeader('Set-Cookie', cookies);
+        callback(null, newToken.token.access_token);
+      }
+    });
+  } else {
+    // Return cached token
+    var access_token = getValueFromCookie('node-tutorial-token', request.headers.cookie);
+    callback(null, access_token);
+  }
+}
+
+function mail(response, request) {
+  getAccessToken(request, response, function(error, token) {
+    console.log('Token found in cookie: ', token);
+    var email = getValueFromCookie('node-tutorial-email', request.headers.cookie);
+    console.log('Email found in cookie: ', email);
+    if (token) {
+      response.writeHead(200, {'Content-Type': 'text/html'});
+      response.write('<p>Token retrieved from cookie: ' + token + '</p>');
+      response.end();
+    } else {
+      response.writeHead(200, {'Content-Type': 'text/html'});
+      response.write('<p> No token found in cookie!</p>');
+      response.end();
+    }
+  });
 }
