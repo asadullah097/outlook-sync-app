@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/Drashti96/Outlook-Sync-Node.js-App#readme",
   "dependencies": {
+    "@microsoft/microsoft-graph-client": "^1.0.0",
+    "es6-promise": "^4.1.0",
     "simple-oauth2": "^1.2.0"
   }
 }

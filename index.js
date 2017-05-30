@@ -1,6 +1,7 @@
 var server = require('./server');
 var router = require('./router');
 var authHelper = require('./authHelper');
+var microsoftGraph = require("@microsoft/microsoft-graph-client");
 
 var handle = {};
 handle['/'] = home;
