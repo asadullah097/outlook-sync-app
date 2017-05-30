@@ -17,7 +17,8 @@ var redirectUri = 'http://localhost:8000/authorize';
 var scopes = [ 'openid',
                'offline_access',
                'User.Read',
-               'Mail.Read' ];
+               'Mail.Read',
+               'Calendars.Read' ];
 
 function getAuthUrl() {
   var returnVal = oauth2.authorizationCode.authorizeURL({
